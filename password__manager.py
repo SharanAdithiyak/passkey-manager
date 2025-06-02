@@ -104,16 +104,6 @@ class RootWindow:
         
         # Create TreeView
         self.create_records_tree()
-        
-        # Status bar
-        self.status_bar = Label(
-            self.root,
-            text="Ready",
-            bd=1,
-            relief='sunken',
-            anchor='w'
-        )
-        self.status_bar.grid(row=2, column=0, sticky='ew', columnspan=4)
 
     def create_entry_labels(self) -> None:
         """Create labels for entry fields."""
@@ -138,15 +128,22 @@ class RootWindow:
         self.row_no += 1
         self.col_no = 0
         
-        button_info = [
+        # First row buttons
+        first_row_buttons = [
             ('Save (Ctrl+S)', 'green', self.save_record),
             ('Delete', 'red', self.delete_record),
             ('Update', 'orange', self.update_record),
-            ('Copy Password', 'blue', self.copy_password),
-            ('Generate Password (Ctrl+G)', 'purple', self.generate_password)
+            ('Copy Password', 'blue', self.copy_password)
         ]
         
-        for btn_text, color, command in button_info:
+        # Second row buttons
+        second_row_buttons = [
+            ('Generate Password (Ctrl+G)', 'purple', self.generate_password),
+            ('Show All Records', '#2c3e50', self.show_all_records)
+        ]
+        
+        # Create first row buttons
+        for btn_text, color, command in first_row_buttons:
             Button(
                 self.crud_frame,
                 text=btn_text,
@@ -159,10 +156,25 @@ class RootWindow:
                 command=command
             ).grid(row=self.row_no, column=self.col_no, padx=5, pady=10)
             self.col_no += 1
-            
-            if btn_text == 'Copy Password':
-                self.row_no += 1
-                self.col_no = 0
+        
+        # Move to second row
+        self.row_no += 1
+        self.col_no = 0
+        
+        # Create second row buttons
+        for btn_text, color, command in second_row_buttons:
+            Button(
+                self.crud_frame,
+                text=btn_text,
+                fg="white",
+                bg=color,
+                font=("Arial", 11),
+                padx=5,
+                pady=2,
+                width=20,
+                command=command
+            ).grid(row=self.row_no, column=self.col_no, padx=5, pady=10)
+            self.col_no += 1
 
     def create_entry_boxes(self):
         self.row_no += 1
@@ -327,11 +339,6 @@ class RootWindow:
         self.entry_boxes[3].insert(0, password)
         self.showmessage("Success", "Generated new password")
 
-    def update_status(self, message: str) -> None:
-        """Update the status bar message."""
-        self.status_bar.config(text=message)
-        self.root.after(3000, lambda: self.status_bar.config(text="Ready"))
-
     def showmessage(self, title_box: str = None, message: str = None) -> None:
         """Show a temporary message popup."""
         TIME_TO_WAIT = 1500  # Reduced time to 1.5 seconds
@@ -354,12 +361,36 @@ class RootWindow:
             fg='white'
         ).pack(fill='both', expand=True)
         
-        self.update_status(message)
-        
         try:
             root.after(TIME_TO_WAIT, root.destroy)
         except Exception as e:
             print("Error occurred:", e)
+
+    def show_all_records(self) -> None:
+        """Display all records in the database."""
+        try:
+            # Clear the search entry
+            self.search_entry.delete(0, END)
+            
+            # Clear existing data in Treeview
+            for item in self.records_tree.get_children():
+                self.records_tree.delete(item)
+            
+            # Get all records from database
+            records_list = self.db.show_records()
+            
+            if not records_list:
+                self.showmessage("Info", "No records found in database")
+                return
+                
+            # Insert all records into the treeview
+            for record in records_list:
+                self.records_tree.insert('', END, values=(record[0], record[3], record[4], record[5]))
+            
+            self.showmessage("Success", f"Found {len(records_list)} records")
+            
+        except Exception as e:
+            self.showmessage("Error", f"Failed to fetch records: {str(e)}")
 
 
 if __name__ == "__main__":
